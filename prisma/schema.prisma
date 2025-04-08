@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  username  String    @id @unique
+  email     String?   @unique
+  password  String
+  name      String?
+  token     String?
+  role      Role      @default(CUSTOMER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  stores    Store[]   @relation("sellerStore")
+  orders    Order[]   @relation("CustomerOrders")
+  addresses Address[]
+}
+
+model Store {
+  id             Int       @id @default(autoincrement())
+  name           String    @unique
+  description    String?
+  logoUrl        String?
+  bannerUrl      String?
+  contact        String
+  isVerified     Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  sellerUsername String    @unique
+  seller         User      @relation("sellerStore", fields: [sellerUsername], references: [username])
+  addressId      Int?      @unique
+  address        Address?  @relation("StoreAddress", fields: [addressId], references: [id])
+  products       Product[]
+  totalProducts  Int?      @default(0)
+  totalSales     Int?      @default(0)
+}
+
+model Address {
+  id         Int     @id @default(autoincrement())
+  street     String?
+  city       String
+  state      String
+  postalCode String
+  country    String
+  username   String?
+  user       User?   @relation(fields: [username], references: [username])
+  store      Store?  @relation("StoreAddress")
+}
+
+model Product {
+  id          Int         @id @default(autoincrement())
+  imageUrl    String?
+  name        String
+  description String?
+  price       Float
+  stock       Int
+  brand       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  storeId     Int
+  store       Store       @relation(fields: [storeId], references: [id])
+  categoryId  Int
+  category    Category    @relation(fields: [categoryId], references: [id])
+  orderItems  OrderItem[]
+}
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  products    Product[]
+}
+
+model Order {
+  id               Int         @id @default(autoincrement())
+  totalAmount      Float
+  status           OrderStatus @default(PENDING)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  usernameCustomer String
+  customer         User        @relation("CustomerOrders", fields: [usernameCustomer], references: [username])
+  orderItems       OrderItem[]
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  quantity  Int
+  price     Float
+  orderId   Int
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+enum Role {
+  ADMIN
+  SELLER
+  CUSTOMER
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
