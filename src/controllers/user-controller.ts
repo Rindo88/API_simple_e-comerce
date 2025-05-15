@@ -24,8 +24,8 @@ export class UserController {
       const request: UserLoginRequest = req.body;
       const response = await UserService.login(request);
 
-      res.cookie('access_token', response.token?.acccessToken, { httpOnly: true, maxAge: 1000 * 60 });
-      res.cookie('refresh_token', response.token?.refreshToken, { httpOnly: true, maxAge: 1000 * 60 });
+      res.cookie('access_token', response.token?.acccessToken, { httpOnly: true, maxAge: 1000 * 60 * 60 });
+      res.cookie('refresh_token', response.token?.refreshToken, { httpOnly: true, maxAge: 1000 * 60 * 60 });
 
       SendResponse.successResponse(200, res, 'Login Successfuly', {
         username: response.username,
@@ -59,10 +59,10 @@ export class UserController {
       next(error);
     }
   }
-  
+
   static async get(req: RequestUser, res: Response, next: NextFunction) {
     try {
-      const response = await UserService.delete(req.user!);
+      const response = await UserService.get(req.user!);
 
       SendResponse.successResponse(200, res, 'Get Successfuly', {
         username: response.username,
@@ -73,10 +73,13 @@ export class UserController {
       next(error);
     }
   }
-  
+
   static async delete(req: RequestUser, res: Response, next: NextFunction) {
     try {
       const response = await UserService.delete(req.user!);
+
+      res.clearCookie('access_token');
+      res.clearCookie('refresh_token');
 
       SendResponse.successResponse(200, res, 'Delete Successfuly', {
         username: response.username,
@@ -88,4 +91,14 @@ export class UserController {
     }
   }
 
+  static async logout(req: RequestUser, res: Response, next: NextFunction) {
+    try {
+      const response = await UserService.logout(req.user!);
+      res.clearCookie('access_token');
+      res.clearCookie('refresh_token');
+      SendResponse.successResponse(200, res, 'Logout Successfuly', response)
+    } catch (error) {
+      next(error);
+    }
+  }
 }
