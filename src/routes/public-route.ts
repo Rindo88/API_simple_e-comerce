@@ -5,4 +5,4 @@ export const publicRoute = express.Router()
 
 publicRoute.post('/api/users/login', UserController.login);
 publicRoute.post('/api/users/register', UserController.create);
-publicRoute.get('/api/stores/:storeName', StoreController.get);
+publicRoute.get('/api/seller/stores/:storeName', StoreController.get);

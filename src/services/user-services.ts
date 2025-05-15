@@ -1,4 +1,4 @@
-import { User } from "@prisma/client";
+import { Prisma, User } from "@prisma/client";
 import { prisma } from "../application/database";
 import { ResponseError } from "../errors/response-error";
 import { toUserResponse, UserCreateRequest, UserLoginRequest, UserResponse, UserUpdateRequest } from "../models/user-model";
@@ -6,7 +6,7 @@ import { Validation } from "../validations/validation";
 import { UserValidation } from "../validations/user-validation";
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { UserPayloadRequest } from "../types/user-payload";
+import { UserPayloadRequest } from "../models/user-payload-model";
 
 export class UserService {
   public static async checkUserToken(token: string): Promise<User> {
@@ -32,6 +32,18 @@ export class UserService {
       secret,
       { expiresIn: `${expire}d` }
     );
+  }
+
+  public static async checkExistsUser(user: UserPayloadRequest): Promise<void> {
+    const countUser = await prisma.user.count({
+      where: {
+        OR: [
+          { username: user.username },
+          { email: user.email }
+        ]
+      }
+    });
+    if (countUser < 1) throw new ResponseError(404, 'User Not Found');
   }
 
   static async create(req: UserCreateRequest): Promise<UserResponse> {
@@ -91,11 +103,24 @@ export class UserService {
       request.password = await bcrypt.hash(request.password, 10);
     }
 
-    const updateUser = await prisma.user.update({
+    const existingUser = await prisma.user.findFirst({
       where: {
-        username: user.username,
-        email: user.email
-      },
+        OR: [
+          { username: user.username },
+          { email: user.email }
+        ]
+      }
+    });
+
+    if (!existingUser) throw new ResponseError(404, 'User Not Found');
+
+    const whereCondition: Prisma.UserWhereUniqueInput =
+      existingUser.username === user.username
+        ? { username: user.username }
+        : { email: user.email };
+
+    const updateUser = await prisma.user.update({
+      where: whereCondition,
       data: request
     });
 
@@ -118,35 +143,36 @@ export class UserService {
   }
 
   static async get(user: UserPayloadRequest): Promise<UserResponse> {
-    const countUser = await prisma.user.count({
+    await this.checkExistsUser(user);
+    const dataUser = await prisma.user.findFirst({
       where: {
-        username: user.username,
-        email: user.email
+        OR: [
+          { username: user.username },
+          { email: user.email }
+        ]
       }
     });
-    if (countUser < 1) throw new ResponseError(404, 'User Not Found');
-    
-    const dataUser = await prisma.user.findUnique({
-      where: {
-        username: user.username,
-        email: user.email
-      }
-    });
+
     return toUserResponse(dataUser!);
   }
 
   static async delete(user: UserPayloadRequest): Promise<UserResponse> {
-    const countUser = await prisma.user.count({
-      where: {
-        username: user.username,
-        email: user.email
-      }
-    });
-    if (countUser < 1) throw new ResponseError(404, 'User Not Found');
+    await this.checkExistsUser(user);
     const updateUser = await prisma.user.delete({
       where: { username: user.username }
     });
 
     return toUserResponse(updateUser);
+  }
+
+  static async logout(user: UserPayloadRequest): Promise<UserResponse> {
+    const deleteToken = await prisma.user.update({
+      where: { username: user.username },
+      data: {
+        token: null
+      }
+    });
+
+    return toUserResponse(deleteToken);
   }
 }

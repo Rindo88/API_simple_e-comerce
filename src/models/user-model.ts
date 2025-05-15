@@ -1,5 +1,5 @@
 import { User } from "@prisma/client";
-import { UserPayloadResponse } from "../types/user-payload";
+import { UserPayloadResponse } from "./user-payload-model";
 
 export interface UserResponse {
   username: string;
@@ -21,7 +21,7 @@ export interface UserLoginRequest {
   password: string
 }
 
-export interface UserUpdateRequest  {
+export interface UserUpdateRequest {
   email?: string;
   password?: string;
   name?: string;

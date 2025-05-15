@@ -70,8 +70,8 @@ model Product {
   updatedAt   DateTime    @updatedAt
   storeId     Int
   store       Store       @relation(fields: [storeId], references: [id])
-  categoryId  Int
-  category    Category    @relation(fields: [categoryId], references: [id])
+  categoryId  Int?
+  category    Category?    @relation(fields: [categoryId], references: [id])
   orderItems  OrderItem[]
 }
 
